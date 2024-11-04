@@ -19,7 +19,6 @@ const createApp = () => {
   app.use("/api/tags", tagRoutes);
   app.use("/api/download", downloadRoutes);
   app.use("/api/search", searchRoute);
-  app.use("/api/documents", permissionRoutes);
   app.use("/api/pagination", paginationRoutes);
   app.use("/api/permissions", permissionRoutes);
 

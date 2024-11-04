@@ -1,24 +1,14 @@
-// src/routes/searchRoutes.ts
+// src/presentation/routes/searchRoute.ts
 import express from "express";
 import { SearchController } from "../../presentation/controllers/searchController";
-import { SearchService } from "../../application/services/searchService";
-import { SearchRepository } from "../../infrastructure/repository/searchRepository";
-import { ConsoleLogger } from "../../infrastructure/logging/consoleLogger";
-
-// Initialize repository, logger, and service
-const searchRepository = new SearchRepository();
-const logger = new ConsoleLogger();
-const searchService = new SearchService();
-
-// Property injection
-searchService.searchRepository = searchRepository;
-searchService.logger = logger;
-
-// Set the service in the controller
-SearchController.setSearchService(searchService);
+import { container } from "../../inversify/config"; // Import the Inversify container
 
 const router = express.Router();
 
-router.get("/advancedSearch", SearchController.advancedSearch);
+// Get the instance of the SearchController from the Inversify container
+const searchController = container.get<SearchController>("SearchController");
+
+// Route definition
+router.get("/advancedSearch", searchController.advancedSearch);
 
 export default router;

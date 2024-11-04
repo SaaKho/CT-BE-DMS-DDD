@@ -16,3 +16,9 @@ export interface PaginatedUsersDTO {
   totalPages: number;
   totalItems: number;
 }
+// src/application/DTOs/paginationInput.dto.ts
+
+export interface PaginationInputDTO {
+  page: number;
+  limit: number;
+}

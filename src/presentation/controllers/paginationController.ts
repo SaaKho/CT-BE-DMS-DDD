@@ -1,15 +1,23 @@
+// src/presentation/controllers/paginationController.ts
+
 import { Request, Response } from "express";
+import { injectable, inject } from "inversify";
 import { PaginationService } from "../../application/services/paginationService";
+import { PaginationInputDTO } from "../../application/DTOs/requests/pagination.dto";
+import { Either, Ok, Failure } from "../../utils/monads";
+import {
+  PaginatedDocumentsResponseDTO,
+  PaginatedUsersResponseDTO,
+} from "../../application/DTOs/responses/paginationResponse.dto";
 
+@injectable()
 export class PaginationController {
-  private static paginationService: PaginationService;
+  constructor(
+    @inject("PaginationService")
+    private readonly paginationService: PaginationService
+  ) {}
 
-  static setPaginationService(service: PaginationService) {
-    PaginationController.paginationService = service;
-  }
-
-  // Validate pagination parameters
-  private static validatePaginationParams(
+  private validatePaginationParams(
     page: string,
     limit: string
   ): { page: number; limit: number } {
@@ -27,52 +35,62 @@ export class PaginationController {
     return { page: parsedPage, limit: parsedLimit };
   }
 
-  // Get paginated documents
-  static getPaginatedDocuments = async (req: Request, res: Response) => {
+  public getPaginatedDocuments = async (req: Request, res: Response) => {
     try {
       const { page = "1", limit = "10" } = req.query as {
         page: string;
         limit: string;
       };
       const { page: validPage, limit: validLimit } =
-        PaginationController.validatePaginationParams(page, limit);
+        this.validatePaginationParams(page, limit);
 
-      const paginatedData =
-        await PaginationController.paginationService.getPaginatedDocuments(
-          validPage,
-          validLimit
-        );
+      const paginationInputDTO: PaginationInputDTO = {
+        page: validPage,
+        limit: validLimit,
+      };
 
-      return res.status(200).json(paginatedData);
+      const result: Either<string, PaginatedDocumentsResponseDTO> =
+        await this.paginationService.getPaginatedDocuments(paginationInputDTO);
+
+      if (result instanceof Failure) {
+        return res.status(400).json({ error: result.value });
+      }
+
+      const successResult = result as Ok<PaginatedDocumentsResponseDTO>;
+      return res.status(200).json(successResult.value);
     } catch (error: any) {
       return res.status(500).json({
         message: error.message || "Failed to fetch paginated documents",
-        error,
       });
     }
   };
 
-  // Get paginated users
-  static getPaginatedUsers = async (req: Request, res: Response) => {
+  public getPaginatedUsers = async (req: Request, res: Response) => {
     try {
       const { page = "1", limit = "10" } = req.query as {
         page: string;
         limit: string;
       };
       const { page: validPage, limit: validLimit } =
-        PaginationController.validatePaginationParams(page, limit);
+        this.validatePaginationParams(page, limit);
 
-      const paginatedData =
-        await PaginationController.paginationService.getPaginatedUsers(
-          validPage,
-          validLimit
-        );
+      const paginationInputDTO: PaginationInputDTO = {
+        page: validPage,
+        limit: validLimit,
+      };
 
-      return res.status(200).json(paginatedData);
+      const result: Either<string, PaginatedUsersResponseDTO> =
+        await this.paginationService.getPaginatedUsers(paginationInputDTO);
+
+      if (result instanceof Failure) {
+        return res.status(400).json({ error: result.value });
+      }
+
+      const successResult = result as Ok<PaginatedUsersResponseDTO>;
+      return res.status(200).json(successResult.value);
     } catch (error: any) {
       return res.status(500).json({
         message: error.message || "Failed to fetch paginated users",
-        error,
       });
     }
   };

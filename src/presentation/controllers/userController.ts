@@ -1,15 +1,21 @@
-// src/controllers/UserController.ts
+// src/presentation/controllers/UserController.ts
 import { Request, Response } from "express";
 import { UserService } from "../../application/services/userService";
 import { registerSchema, loginSchema } from "../validation/authvalidation";
-import { AuthenticatedRequest } from "../../presentation/middleware/authMiddleware";
+import { AuthenticatedRequest } from "../../presentation/middleware/roleMiddleware";
 import {
   RegisterUserDTO,
   UpdateUserDTO,
-} from "../../application/DTOs/user.dto";
+} from "../../application/DTOs/requests/user.dto";
+import {
+  RegisterUserResponseDTO,
+  UpdateUserResponseDTO,
+  LoginResponseDTO,
+} from "../../application/DTOs/responses/userResponse.dto";
+import { Either, Ok, Failure } from "../../utils/monads";
 
 export class UserController {
-  private static userService: UserService;
+  public static userService: UserService;
 
   static setUserService(service: UserService) {
     this.userService = service;
@@ -23,17 +29,21 @@ export class UserController {
         errors: validation.error.errors,
       });
     }
-    const { username, email, password } = req.body;
-    const dto: RegisterUserDTO = { username, email, password };
+
+    const dto: RegisterUserDTO = req.body;
 
     try {
-      const result = await this.userService.registerNewUser(dto);
-      if ((result as any).isFailure()) {
-        return res.status(500).json({ message: (result as any).error });
+      const result: Either<string, RegisterUserResponseDTO> =
+        await this.userService.registerNewUser(dto);
+
+      if (result instanceof Failure) {
+        return res.status(500).json({ message: result.value });
       }
-      res.status(201).json({ message: "User registered successfully" });
+
+      const response = result.value as RegisterUserResponseDTO;
+      return res.status(201).json(response);
     } catch (error) {
-      res.status(500).json({ message: "Failed to register user" });
+      return res.status(500).json({ message: "Failed to register user" });
     }
   };
 
@@ -48,17 +58,21 @@ export class UserController {
         errors: validation.error.errors,
       });
     }
-    const { username, email, password } = req.body;
-    const dto: RegisterUserDTO = { username, email, password };
+
+    const dto: RegisterUserDTO = req.body;
 
     try {
-      const result = await this.userService.registerNewAdmin(dto);
-      if ((result as any).isFailure()) {
-        return res.status(500).json({ message: (result as any).error });
+      const result: Either<string, RegisterUserResponseDTO> =
+        await this.userService.registerNewAdmin(dto);
+
+      if (result instanceof Failure) {
+        return res.status(500).json({ message: result.value });
       }
-      res.status(201).json({ message: "Admin registered successfully" });
+
+      const response = result.value as RegisterUserResponseDTO;
+      return res.status(201).json(response);
     } catch (error) {
-      res.status(500).json({ message: "Failed to register admin" });
+      return res.status(500).json({ message: "Failed to register admin" });
     }
   };
 
@@ -70,50 +84,59 @@ export class UserController {
         errors: validation.error.errors,
       });
     }
+
     const { username, password } = req.body;
+
     try {
-      const result = await this.userService.login(username, password);
-      if ((result as any).isFailure()) {
-        return res.status(401).json({ message: (result as any).error });
+      const result: Either<string, LoginResponseDTO> =
+        await this.userService.login(username, password);
+
+      if (result instanceof Failure) {
+        return res.status(401).json({ message: result.value });
       }
-      res.status(200).json({
-        message: "Login successful",
-        token: (result as any).value.token,
-      });
-    } catch (error) {
-      res.status(401).json({ message: "Invalid username or password" });
+
+      const response = result.value as LoginResponseDTO;
+      return res.status(200).json(response);
+    } catch (error: any) {
+      console.error("Error during login:", error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error", error: error.message });
     }
   };
 
   static updateUser = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const { username, email, password, role } = req.body;
-    const dto: UpdateUserDTO = { id, username, email, password, role };
+    const dto: UpdateUserDTO = { id, ...req.body };
 
     try {
-      const result = await this.userService.updateUser(dto);
-      if ((result as any).isFailure()) {
-        return res.status(500).json({ message: (result as any).error });
+      const result: Either<string, UpdateUserResponseDTO> =
+        await this.userService.updateUser(dto);
+
+      if (result instanceof Failure) {
+        return res.status(500).json({ message: result.value });
       }
-      res.status(200).json({
-        message: "User updated successfully",
-        user: (result as any).value,
-      });
+
+      const response = result.value as UpdateUserResponseDTO;
+      return res.status(200).json(response);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update user" });
+      return res.status(500).json({ message: "Failed to update user" });
     }
   };
 
   static deleteUser = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+
     try {
       const result = await this.userService.deleteUser(id);
-      if ((result as any).isFailure()) {
-        return res.status(500).json({ message: (result as any).error });
+
+      if (result instanceof Failure) {
+        return res.status(500).json({ message: result.value });
       }
-      res.status(200).json({ message: "User deleted successfully" });
+
+      return res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete user" });
+      return res.status(500).json({ message: "Failed to delete user" });
     }
   };
 }

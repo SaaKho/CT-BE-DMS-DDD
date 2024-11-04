@@ -1,57 +1,60 @@
 // src/application/services/SearchService.ts
-import { ISearchRepository } from "../../domain/interfaces/Isearch.repository";
+
+import { injectable, inject } from "inversify";
 import { Logger } from "../../infrastructure/logging/logger";
+import { IDocumentRepository } from "src/domain/interfaces/IDocument.Repository";
 import { DocumentMapper } from "../mappers/documentMapper";
-import { SearchResultDTO } from "../DTOs/search.dto";
+import { SearchCriteriaDTO } from "../DTOs/requests/search.dto";
+import { SearchResultResponseDTO } from "../DTOs/responses/searchResponse.dto";
 import { Either, ok, failure } from "../../utils/monads";
 
+@injectable()
 export class SearchService {
-  private _searchRepository!: ISearchRepository;
-  private _logger!: Logger;
+  constructor(
+    @inject("IDocumentRepository")
+    private readonly documentRepository: IDocumentRepository,
+    @inject("Logger") private readonly logger: Logger
+  ) {}
 
-  set searchRepository(repository: ISearchRepository) {
-    this._searchRepository = repository;
-  }
+  async advancedSearch(
+    criteria: SearchCriteriaDTO
+  ): Promise<Either<string, SearchResultResponseDTO>> {
+    const { tags, fileName, contentType } = criteria;
 
-  set logger(logger: Logger) {
-    this._logger = logger;
-  }
-
-  advancedSearch = async (
-    tags: string[],
-    fileName?: string,
-    contentType?: string
-  ): Promise<Either<string, SearchResultDTO>> => {
-    this._logger.log(
+    this.logger.log(
       `Performing advanced search with: tags=${tags}, fileName=${fileName}, contentType=${contentType}`
     );
 
     try {
-      const results = await this._searchRepository.advancedSearch(
+      // Perform the search in the document repository
+      const documents = await this.documentRepository.searchDocuments(
         tags,
         fileName,
         contentType
       );
 
-      if (results.length === 0) {
-        this._logger.log(
-          `No documents found for the specified search criteria.`
-        );
+      // Check if any documents were found
+      if (documents.length === 0) {
+        this.logger.log("No documents found for the specified search criteria.");
         return failure("No documents match the search criteria");
       }
 
-      this._logger.log(`Search returned ${results.length} results`);
+      // Map the documents to DTOs using the DocumentMapper
+      const documentDTOs = documents.map(DocumentMapper.toDTO);
 
-      // Map results to DocumentDTO
-      const documentDTOs = results.map(DocumentMapper.toDTO);
+      // Create the response DTO
+      const response: SearchResultResponseDTO = {
+        documents: documentDTOs,
+        totalResults: documents.length,
+        message: "Documents retrieved successfully"
+      };
 
-      return ok({
-        results: documentDTOs,
-        totalResults: results.length,
-      });
+      // Return a successful response
+      return ok(response);
     } catch (error: any) {
-      this._logger.error(`Error during advanced search: ${error.message}`);
+      // Log the error and return a failure
+      this.logger.error(`Error during advanced search: ${error.message}`);
       return failure("Failed to perform advanced search");
     }
-  };
+  }
 }

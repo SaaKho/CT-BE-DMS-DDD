@@ -1,14 +1,11 @@
+// src/presentation/controllers/tagController.ts
 import { Request, Response } from "express";
-import { TagService } from "../../domain/services/tagService";
+import { TagService } from "../../application/services/tagService";
 
 export class TagController {
-  private static tagService: TagService;
+  constructor(private readonly tagService: TagService) {}
 
-  static setTagService(service: TagService) {
-    TagController.tagService = service;
-  }
-
-  static addNewTag = async (req: Request, res: Response) => {
+  addNewTag = async (req: Request, res: Response) => {
     const { documentId } = req.params;
     const { name } = req.body;
 
@@ -17,10 +14,7 @@ export class TagController {
     }
 
     try {
-      const updatedDocument = await TagController.tagService.addNewTag(
-        documentId,
-        name
-      );
+      const updatedDocument = await this.tagService.addNewTag(documentId, name);
       res.status(200).json({
         message: "Tag added successfully",
         document: updatedDocument,
@@ -30,7 +24,7 @@ export class TagController {
     }
   };
 
-  static updateTag = async (req: Request, res: Response) => {
+  updateTag = async (req: Request, res: Response) => {
     const { documentId } = req.params;
     const { oldName, newName } = req.body;
 
@@ -41,7 +35,7 @@ export class TagController {
     }
 
     try {
-      const updatedDocument = await TagController.tagService.updateTag(
+      const updatedDocument = await this.tagService.updateTag(
         documentId,
         oldName,
         newName
@@ -55,7 +49,7 @@ export class TagController {
     }
   };
 
-  static deleteTag = async (req: Request, res: Response) => {
+  deleteTag = async (req: Request, res: Response) => {
     const { documentId } = req.params;
     const { name } = req.body;
 
@@ -64,10 +58,7 @@ export class TagController {
     }
 
     try {
-      const updatedDocument = await TagController.tagService.deleteTag(
-        documentId,
-        name
-      );
+      const updatedDocument = await this.tagService.deleteTag(documentId, name);
       res.status(200).json({
         message: "Tag deleted successfully",
         document: updatedDocument,

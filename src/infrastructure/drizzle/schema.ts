@@ -39,8 +39,8 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: text("password").notNull(),
   role: varchar("role", { length: 10 }).notNull().default("User"),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
+  created_at: timestamp("createdAt").defaultNow(),
+  updated_at: timestamp("updatedAt").defaultNow(),
 });
 
 export const permissions = pgTable("permissions", {

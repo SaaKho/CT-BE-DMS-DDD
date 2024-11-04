@@ -1,29 +1,27 @@
-// src/routes/downloadRoutes.ts
 import express from "express";
-import { DownloadController } from "../../presentation/controllers/downloadController";
+import { DownloadController } from "../controllers/downloadController";
+import { container } from "../../inversify/config";
 import { DownloadService } from "../../application/services/downloadService";
-import { DownloadRepository } from "../../infrastructure/repository/downloadRepository";
-import { ConsoleLogger } from "../../infrastructure/logging/consoleLogger";
+import { AuthMiddleware } from "../middleware/authMiddleware"; // Import AuthMiddleware
 
 const router = express.Router();
 
-// Initialize repository, logger, and service
-const downloadRepository = new DownloadRepository();
-const logger = new ConsoleLogger();
-const downloadService = new DownloadService();
+// Get instances of the services
+const downloadService = container.get<DownloadService>("DownloadService");
+const authMiddleware = container.get<AuthMiddleware>("AuthMiddleware"); // Get AuthMiddleware
 
-// Property injection
-downloadService.downloadRepository = downloadRepository;
-downloadService.logger = logger;
-
-// Inject the service into the controller
 DownloadController.setDownloadService(downloadService);
 
+// Define routes with authentication
 router.post(
-  "/generate-download-link/:filename",
-  DownloadController.generateLink
+  "/link",
+  authMiddleware.authenticate,
+  DownloadController.generateDownloadLink
 );
-
-router.get("/:token", DownloadController.downloadFile);
+router.get(
+  "/:token",
+  authMiddleware.authenticate,
+  DownloadController.serveFileByToken
+);
 
 export default router;
