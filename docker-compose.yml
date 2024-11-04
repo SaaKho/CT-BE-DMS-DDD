@@ -1,0 +1,9 @@
+services:
+  backend:
+    image: dms
+    ports:
+      - "4000-4002:4000"  # Or use another configuration that works for you
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
