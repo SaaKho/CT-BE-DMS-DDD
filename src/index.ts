@@ -1,23 +1,38 @@
-import express from "express";
-import authRoutes from "./routes/users/authRoutes";
-import documentRoutes from "./routes/document/documentRoutes";
-import tagRoutes from "./routes/document/tagRoutes";
-import downloadRoutes from "./routes/document/downloadRoutes";
-import searchRoute from "./routes/document/searchRoute";
+import { Command } from "commander";
+import dotenv from "dotenv";
+import createApp from "./app";
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+// Load environment variables
+dotenv.config();
 
-// Middleware
-app.use(express.json());
+// Initialize Commander
+const program = new Command();
 
-// Routes
-app.use("/api/users", authRoutes);
-app.use("/api/documents", documentRoutes);
-app.use("/api/tags", tagRoutes);
-app.use("/api/download", downloadRoutes);
-app.use("/api/search", searchRoute);
+// Define options
+program
+  .option(
+    "-p, --port <number>",
+    "Port to run the server",
+    process.env.PORT || "5000"
+  )
+  .option("--env <environment>", "Set environment", "development");
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Define the "start" command
+program
+  .command("start")
+  .description("Start the Express server")
+  .action(() => {
+    const app = createApp(); // Get the app instance
+    const port = program.opts().port;
+
+    // Start the server
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  });
+
+// Parse the command-line arguments
+program.parse(process.argv);
+//Maybe the most important part of this code is the createApp function. This function is responsible for creating
+//an Express app instance and setting up the middleware and routes.
+//The app instance is then returned to be used in the start command.

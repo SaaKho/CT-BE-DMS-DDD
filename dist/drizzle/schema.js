@@ -23,41 +23,43 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.users = exports.documents = exports.db = exports.UserRole = void 0;
+exports.permissions = exports.users = exports.documents = exports.db = void 0;
 const node_postgres_1 = require("drizzle-orm/node-postgres");
 const pg_1 = require("pg");
 const dotenv = __importStar(require("dotenv"));
 const pg_core_1 = require("drizzle-orm/pg-core");
-// Load environment variables
 dotenv.config();
-// Define the UserRole enum
-var UserRole;
-(function (UserRole) {
-    UserRole["User"] = "User";
-    UserRole["Admin"] = "Admin";
-})(UserRole || (exports.UserRole = UserRole = {}));
-// Create a connection pool
 const pool = new pg_1.Pool({
     connectionString: process.env.DATABASE_URL,
 });
-// Initialize Drizzle ORM with the pool
 exports.db = (0, node_postgres_1.drizzle)(pool);
-// Define the documents table schema with UUID
 exports.documents = (0, pg_core_1.pgTable)("documents", {
-    id: (0, pg_core_1.uuid)("id").primaryKey().defaultRandom(),
-    title: (0, pg_core_1.varchar)("title", { length: 255 }),
-    content: (0, pg_core_1.text)("content"),
-    author: (0, pg_core_1.text)("author"),
-    created_at: (0, pg_core_1.timestamp)("created_at").defaultNow(),
-    updated_at: (0, pg_core_1.timestamp)("updated_at").defaultNow(),
+    id: (0, pg_core_1.uuid)("id").primaryKey(),
+    fileName: (0, pg_core_1.varchar)("fileName", { length: 255 }).notNull(),
+    fileExtension: (0, pg_core_1.varchar)("fileExtension", { length: 10 }).notNull(),
+    contentType: (0, pg_core_1.varchar)("contentType", { length: 50 }).notNull(),
+    tags: (0, pg_core_1.text)("tags").array().default([]),
+    createdAt: (0, pg_core_1.timestamp)("createdAt").defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updatedAt").defaultNow(),
 });
-// Define the users table schema with UUID and role
 exports.users = (0, pg_core_1.pgTable)("users", {
-    id: (0, pg_core_1.uuid)("id").primaryKey().defaultRandom(),
+    id: (0, pg_core_1.uuid)("id").primaryKey(),
     username: (0, pg_core_1.varchar)("username", { length: 100 }).notNull().unique(),
     email: (0, pg_core_1.varchar)("email", { length: 255 }).notNull().unique(),
     password: (0, pg_core_1.text)("password").notNull(),
-    role: (0, pg_core_1.varchar)("role", { length: 10 }).notNull().default(UserRole.User), // Use enum for default value
+    role: (0, pg_core_1.varchar)("role", { length: 10 }).notNull().default("User"),
+    created_at: (0, pg_core_1.timestamp)("created_at").defaultNow(),
+    updated_at: (0, pg_core_1.timestamp)("updated_at").defaultNow(),
+});
+exports.permissions = (0, pg_core_1.pgTable)("permissions", {
+    id: (0, pg_core_1.uuid)("id").primaryKey(),
+    documentId: (0, pg_core_1.uuid)("document_id")
+        .references(() => exports.documents.id)
+        .notNull(),
+    userId: (0, pg_core_1.uuid)("user_id")
+        .references(() => exports.users.id)
+        .notNull(),
+    permissionType: (0, pg_core_1.varchar)("permission_type", { length: 10 }).notNull(),
     created_at: (0, pg_core_1.timestamp)("created_at").defaultNow(),
     updated_at: (0, pg_core_1.timestamp)("updated_at").defaultNow(),
 });
