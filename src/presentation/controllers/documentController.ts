@@ -1,9 +1,12 @@
-// src/controllers/documentController.ts
+// src/presentation/controllers/documentController.ts
 import { Response } from "express";
 import { DocumentService } from "../../application/services/documentService";
-import { documentSchema } from "../validation/documentvalidation";
-import { AuthenticatedRequest } from "../../presentation/middleware/authMiddleware";
-import { UploadDocumentDTO } from "../../application/DTOs/document.dto";
+import { AuthenticatedRequest } from "../../presentation/middleware/roleMiddleware";
+import {
+  UploadDocumentDTO,
+  UpdateDocumentDTO,
+  CreateDocumentDTO,
+} from "../../application/DTOs/requests/document.dto";
 
 export class DocumentController {
   public static documentService: DocumentService;
@@ -16,14 +19,6 @@ export class DocumentController {
     req: AuthenticatedRequest,
     res: Response
   ) => {
-    const validation = documentSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: validation.error.errors,
-      });
-    }
-
     const { fileName, fileExtension, contentType, tags } = req.body;
     const userId = req.user?.id;
 
@@ -32,22 +27,29 @@ export class DocumentController {
     }
 
     const tagsArray = Array.isArray(tags) ? tags : tags.split(",");
-    const result = await this.documentService.createDocument(
+
+    const createDocumentDTO: CreateDocumentDTO = {
       userId,
       fileName,
-      fileExtension || "",
+      fileExtension: fileExtension || "",
       contentType,
-      tagsArray
-    );
+      tags: tagsArray,
+    };
 
-    if ((result as any).error) {
-      return res.status(500).json({ message: (result as any).error.message });
+    try {
+      const result = await this.documentService.createDocument(
+        createDocumentDTO
+      );
+
+      res.status(201).json({
+        message: "Document created successfully",
+        document: result, // Return DTO
+      });
+    } catch (error: any) {
+      return res
+        .status(500)
+        .json({ message: "Error creating document", error: error.message });
     }
-
-    res.status(201).json({
-      message: "Document created successfully",
-      document: (result as any).value,
-    });
   };
 
   public static getDocument = async (
@@ -69,14 +71,20 @@ export class DocumentController {
     res: Response
   ) => {
     const { documentId } = req.params;
-    const { fileName, fileExtension, contentType, tags } = req.body;
+    const { fileName, fileExtension, contentType, tags, filePath } = req.body;
 
-    const result = await this.documentService.updateDocument(documentId, {
+    const updateDocumentDTO: UpdateDocumentDTO = {
       fileName,
       fileExtension,
       contentType,
       tags: Array.isArray(tags) ? tags : tags.split(","),
-    });
+      filePath,
+    };
+
+    const result = await this.documentService.updateDocument(
+      documentId,
+      updateDocumentDTO
+    );
 
     if ((result as any).error) {
       return res.status(404).json({ message: (result as any).error.message });
@@ -121,7 +129,13 @@ export class DocumentController {
     const fileExtension = file.originalname.split(".").pop() || "";
     const contentType = file.mimetype;
     const tags = req.body.tags ? req.body.tags.split(",") : [];
-    const filePath = `src/uploads/${file.filename}`;
+
+    // Use original filename for file path
+    const filePath = `uploads/${fileName}`;
+
+    console.log(
+      `Uploading document with file name: ${fileName} and path: ${filePath}`
+    );
 
     const dto: UploadDocumentDTO = {
       fileName,
@@ -136,13 +150,20 @@ export class DocumentController {
     const result = await this.documentService.uploadDocument(dto);
 
     if ((result as any).error) {
+      console.error(
+        `Error uploading document with ID: ${documentId}, error: ${
+          (result as any).error.message
+        }`
+      );
       return res.status(500).json({ message: (result as any).error.message });
     }
 
+    const documentDto = (result as any).value; // Assuming result.value is the DTO
+
     res.status(201).json({
       message: "Document uploaded successfully",
-      documentId: (result as any).value.getId(),
-      document: (result as any).value,
+      documentId: documentDto.id, // Accessing `id` directly from DTO
+      document: documentDto,
     });
   };
 }

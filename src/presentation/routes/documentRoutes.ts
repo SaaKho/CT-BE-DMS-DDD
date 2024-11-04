@@ -1,84 +1,50 @@
-// src/routes/documentRoutes.ts
 import express from "express";
-import multer from "multer";
-import { AuthMiddleware } from "../../presentation/middleware/authMiddleware";
-import { roleMiddleware } from "../../presentation/middleware/roleMiddleware";
+import { DocumentController } from "../controllers/documentController";
+import { container } from "../../inversify/config";
 import { DocumentService } from "../../application/services/documentService";
-import { DocumentController } from "../../presentation/controllers/documentController";
-import { DocumentRepository } from "../../infrastructure/repository/documentRepository";
-import { ConsoleLogger } from "../../infrastructure/logging/consoleLogger";
-import { JwtAuthHandler } from "../../infrastructure/auth/handlers/JWTAuthHandler";
-import { UserRepository } from "../../infrastructure/repository/userRepository";
+import { AuthMiddleware } from "../middleware/authMiddleware"; // Import AuthMiddleware
+import multer from "multer";
 
+// Create a router
 const router = express.Router();
 
-// Initialize repository, logger, and service instances
-const documentRepository = new DocumentRepository();
-const logger = new ConsoleLogger();
-const documentService = new DocumentService();
-const userRepository = new UserRepository();
-const authHandler = new JwtAuthHandler(userRepository);
+// Manually inject the DocumentService into the controller
+const documentService = container.get<DocumentService>("DocumentService");
+DocumentController.setDocumentService(documentService);
 
-// Use property injection to set dependencies
-documentService.documentRepository = documentRepository;
-documentService.logger = logger;
-DocumentController.documentService = documentService;
+// Resolve AuthMiddleware via the Inversify container
+const authMiddleware = container.get<AuthMiddleware>("AuthMiddleware");
 
-// Instantiate authMiddleware with the auth handler
-const authMiddleware = new AuthMiddleware(authHandler);
+// Configure multer to store files in the 'uploads/' directory
+const upload = multer({ dest: "uploads/" });
 
-// Multer setup for handling file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "src/uploads"); // Ensure this path is correct
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage });
-
-// Route definitions
+// Define routes with AuthMiddleware for protected routes
 router.post(
-  "/createDocument",
+  "/create",
   authMiddleware.authenticate,
   DocumentController.createNewDocument
 );
-//Need to make sure the create API only does what it is doing right now that
-//storing an instance of the file. The file will be uploaded using the upload endpoint and a filepath should be created as reference
-//but still want to discuss the changes in the schema do i add content and filepath to the schema
-//do i make a seperate table for the content management
-
 router.get(
-  "/getDocument/:documentId",
+  "/:documentId",
   authMiddleware.authenticate,
-  roleMiddleware(["Viewer", "Editor", "Owner"]),
   DocumentController.getDocument
 );
 router.put(
-  "/updateDocument/:documentId",
+  "/:documentId",
   authMiddleware.authenticate,
   DocumentController.updateDocument
 );
-// router.post(
-//   "/uploadDocument",
-//   authMiddleware.authenticate,
-//   upload.single("file"),
-//   DocumentController.uploadDocument
-// );
-// src/routes/documentRoutes.ts
+router.delete(
+  "/:documentId",
+  authMiddleware.authenticate,
+  DocumentController.deleteDocument
+);
+
 router.post(
-  "/uploadDocument/:documentId",
+  "/upload/:documentId",
   authMiddleware.authenticate,
   upload.single("file"),
   DocumentController.uploadDocument
-);
-
-router.delete(
-  "/deleteDocument/:documentId",
-  authMiddleware.authenticate,
-  // adminMiddleware,
-  DocumentController.deleteDocument
 );
 
 export default router;

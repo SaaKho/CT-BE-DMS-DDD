@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "target": "ES2020",                    // Specifies the ECMAScript target version for the compiled code.
     "module": "commonjs",                  // Defines the module system, CommonJS is typically used in Node.js environments.
     "strict": true,                        // Enables all strict type-checking options for better type safety.

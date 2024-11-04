@@ -1,10 +1,9 @@
-// src/repository/interfaces/IDocumentRepository.ts
-import { Document } from "../../entities/Document";
+import { Document } from "../../domain/entities/Document";
 
 export interface IDocumentRepository {
   findDocumentById(documentId: string): Promise<Document | null>;
-  createDocument(documentData: Document): Promise<Document | null>;
-  updateDocument(
+  create(documentData: Document): Promise<Document | null>;
+  update(
     documentId: string,
     updates: Partial<{
       fileName: string;
@@ -14,6 +13,25 @@ export interface IDocumentRepository {
       filePath: string;
     }>
   ): Promise<Document | null>;
-  deleteDocument(documentId: string): Promise<Document | null>;
+  delete(documentId: string): Promise<Document | null>;
   assignOwnerPermission(documentId: string, userId: string): Promise<void>;
+
+  // Tag-specific methods
+  addTag(documentId: string, tagName: string): Promise<Document | null>;
+  updateTag(
+    documentId: string,
+    oldTagName: string,
+    newTagName: string
+  ): Promise<Document | null>;
+  deleteTag(documentId: string, tagName: string): Promise<Document | null>;
+
+  //search specific method
+  searchDocuments(
+    tags?: string[],
+    fileName?: string,
+    contentType?: string
+  ): Promise<Document[]>;
+  findPaginatedDocuments(limit: number, offset: number): Promise<Document[]>;
+
+  countDocuments(): Promise<number>;
 }

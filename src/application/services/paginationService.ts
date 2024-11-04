@@ -1,45 +1,50 @@
-// src/application/services/PaginationService.ts
+// src/application/services/paginationService.ts
 
-import { IPaginationRepository } from "../../domain/interfaces/Ipagination.repository";
+import { injectable, inject } from "inversify";
 import { Logger } from "../../infrastructure/logging/logger";
 import { DocumentMapper } from "../mappers/documentMapper";
 import { UserMapper } from "../mappers/userMapper";
 import { Either, ok, failure } from "../../utils/monads";
-import { PaginatedDocumentsDTO } from "../DTOs/pagination.dto";
-import { PaginatedUsersDTO } from "../DTOs/pagination.dto";
+import { PaginationInputDTO } from "../DTOs/requests/pagination.dto";
+import {
+  PaginatedDocumentsResponseDTO,
+  PaginatedUsersResponseDTO,
+} from "../DTOs/responses/paginationResponse.dto";
+import { IDocumentRepository } from "../../domain/interfaces/IDocument.Repository";
+import { IUserRepository } from "../../domain/interfaces/IUser.Repository";
 
+@injectable()
 export class PaginationService {
-  private _paginationRepository!: IPaginationRepository;
-  private _logger!: Logger;
-
-  set paginationRepository(repository: IPaginationRepository) {
-    this._paginationRepository = repository;
-  }
-
-  set logger(logger: Logger) {
-    this._logger = logger;
-  }
+  constructor(
+    @inject("Logger") private readonly _logger: Logger,
+    @inject("IDocumentRepository")
+    private readonly documentRepository: IDocumentRepository,
+    @inject("IUserRepository") private readonly userRepository: IUserRepository
+  ) {}
 
   async getPaginatedDocuments(
-    page: number,
-    limit: number
-  ): Promise<Either<string, PaginatedDocumentsDTO>> {
+    dto: PaginationInputDTO
+  ): Promise<Either<string, PaginatedDocumentsResponseDTO>> {
+    const { page, limit } = dto;
     this._logger.log(
       `Fetching paginated documents for page: ${page}, limit: ${limit}`
     );
 
-    try {
-      const paginatedData =
-        await this._paginationRepository.getPaginatedDocuments(page, limit);
+    const offset = (page - 1) * limit;
 
-      // Convert entities to DTOs
-      const documentDTOs = paginatedData.data.map(DocumentMapper.toDTO);
+    try {
+      const totalItems = await this.documentRepository.countDocuments();
+      const paginatedData =
+        await this.documentRepository.findPaginatedDocuments(limit, offset);
+
+      const documentDTOs = paginatedData.map(DocumentMapper.toDTO);
 
       return ok({
         data: documentDTOs,
         currentPage: page,
-        totalPages: Math.ceil(paginatedData.totalItems / limit),
-        totalItems: paginatedData.totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        message: "Documents retrieved successfully",
       });
     } catch (error: any) {
       this._logger.error(
@@ -50,27 +55,30 @@ export class PaginationService {
   }
 
   async getPaginatedUsers(
-    page: number,
-    limit: number
-  ): Promise<Either<string, PaginatedUsersDTO>> {
+    dto: PaginationInputDTO
+  ): Promise<Either<string, PaginatedUsersResponseDTO>> {
+    const { page, limit } = dto;
     this._logger.log(
       `Fetching paginated users for page: ${page}, limit: ${limit}`
     );
 
+    const offset = (page - 1) * limit;
+
     try {
-      const paginatedData = await this._paginationRepository.getPaginatedUsers(
-        page,
-        limit
+      const totalItems = await this.userRepository.countUsers();
+      const paginatedData = await this.userRepository.findPaginatedUsers(
+        limit,
+        offset
       );
 
-      // Convert entities to DTOs
-      const userDTOs = paginatedData.data.map(UserMapper.toDTO);
+      const userDTOs = paginatedData.map(UserMapper.toDTO);
 
       return ok({
         data: userDTOs,
         currentPage: page,
-        totalPages: Math.ceil(paginatedData.totalItems / limit),
-        totalItems: paginatedData.totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        message: "Users retrieved successfully",
       });
     } catch (error: any) {
       this._logger.error(`Error fetching paginated users: ${error.message}`);

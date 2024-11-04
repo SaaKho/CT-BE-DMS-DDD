@@ -1,13 +1,17 @@
-// src/application/services/TagService.ts
-import { ITagRepository } from "../../domain/interfaces/Itag.repository";
-import { Document } from "../entities/Document";
+import { IDocumentRepository } from "../../domain/interfaces/IDocument.Repository";
 import { Logger } from "../../infrastructure/logging/logger";
+import { Document } from "../../domain/entities/Document";
 import { Either, ok, failure } from "../../utils/monads";
 import { Tag } from "../../domain/valueObjects/Tag";
+import { injectable, inject } from "inversify";
 
+@injectable()
 export class TagService {
-  public tagRepository!: ITagRepository; // Property injection for the repository
-  public logger!: Logger; // Property injection for the logger
+  constructor(
+    @inject("IDocumentRepository")
+    private readonly documentRepository: IDocumentRepository,
+    @inject("Logger") private readonly logger: Logger
+  ) {}
 
   async addNewTag(
     documentId: string,
@@ -17,16 +21,21 @@ export class TagService {
     this.logger.log(
       `Adding new tag '${tag.getName()}' to document: ${documentId}`
     );
+
     try {
-      const updatedDocument = await this.tagRepository.addTag(documentId, tag);
-      this.logger.log(
-        `Tag '${tag.getName()}' added successfully to document: ${documentId}`
+      const updatedDocument = await this.documentRepository.addTag(
+        documentId,
+        tag.getName()
       );
+
+      if (!updatedDocument) {
+        this.logger.error(`Document not found for ID: ${documentId}`);
+        return failure("Document not found");
+      }
+
       return ok(updatedDocument);
     } catch (error: any) {
-      this.logger.error(
-        `Error adding tag '${tag.getName()}' to document: ${error.message}`
-      );
+      this.logger.error(`Error adding tag: ${error.message}`);
       return failure("Failed to add the tag to the document");
     }
   }
@@ -41,18 +50,22 @@ export class TagService {
     this.logger.log(
       `Updating tag from '${oldTag.getName()}' to '${newTag.getName()}' on document: ${documentId}`
     );
+
     try {
-      const updatedDocument = await this.tagRepository.updateTag(
+      const updatedDocument = await this.documentRepository.updateTag(
         documentId,
-        oldTag,
-        newTag
+        oldTag.getName(),
+        newTag.getName()
       );
-      this.logger.log(
-        `Tag updated successfully from '${oldTag.getName()}' to '${newTag.getName()}' on document: ${documentId}`
-      );
+
+      if (!updatedDocument) {
+        this.logger.error(`Document not found for ID: ${documentId}`);
+        return failure("Document not found");
+      }
+
       return ok(updatedDocument);
     } catch (error: any) {
-      this.logger.error(`Error updating tag on document: ${error.message}`);
+      this.logger.error(`Error updating tag: ${error.message}`);
       return failure("Failed to update the tag on the document");
     }
   }
@@ -65,19 +78,21 @@ export class TagService {
     this.logger.log(
       `Deleting tag '${tag.getName()}' from document: ${documentId}`
     );
+
     try {
-      const updatedDocument = await this.tagRepository.deleteTag(
+      const updatedDocument = await this.documentRepository.deleteTag(
         documentId,
-        tag
+        tag.getName()
       );
-      this.logger.log(
-        `Tag '${tag.getName()}' deleted successfully from document: ${documentId}`
-      );
+
+      if (!updatedDocument) {
+        this.logger.error(`Document not found for ID: ${documentId}`);
+        return failure("Document not found");
+      }
+
       return ok(updatedDocument);
     } catch (error: any) {
-      this.logger.error(
-        `Error deleting tag '${tag.getName()}' from document: ${error.message}`
-      );
+      this.logger.error(`Error deleting tag: ${error.message}`);
       return failure("Failed to delete the tag from the document");
     }
   }

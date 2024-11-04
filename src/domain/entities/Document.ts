@@ -1,46 +1,57 @@
-// src/entities/Document.ts
+// src/domain/entities/Document.ts
+
+import { FileName } from "../valueObjects/filename.vo";
+import { FileExtension } from "../valueObjects/fileExtension.vo";
+import { ContentType } from "../valueObjects/contentType.vo";
+import { FilePath } from "../valueObjects/filepath.vo";
+
 export class Document {
-  private id!: string;
-  private fileName!: string;
-  private fileExtension!: string;
-  private contentType!: string;
+  private id: string;
+  private fileName: FileName;
+  private fileExtension: FileExtension;
+  private contentType: ContentType;
   private tags: string[];
   private createdAt: Date;
   private updatedAt: Date;
-  private filePath!: string;
+  private filePath: FilePath;
 
   constructor(
     id: string,
-    fileName: string,
-    fileExtension: string,
-    contentType: string,
+    fileName: FileName,
+    fileExtension: FileExtension,
+    contentType: ContentType,
     tags: string[] = [],
     createdAt: Date = new Date(),
     updatedAt: Date = new Date(),
-    filePath: string = ""
+    filePath: FilePath
   ) {
-    this.setId(id);
-    this.setFileName(fileName);
-    this.setFileExtension(fileExtension);
-    this.setContentType(contentType);
+    if (!id || id.length === 0) {
+      throw new Error("ID cannot be empty.");
+    }
+
+    this.id = id;
+    this.fileName = fileName;
+    this.fileExtension = fileExtension;
+    this.contentType = contentType;
     this.tags = tags;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
-    this.setFilePath(filePath);
+    this.filePath = filePath;
   }
 
-  public updateFileName(newFileName: string): void {
-    this.setFileName(newFileName);
+  // Update methods
+  public updateFileName(newFileName: FileName): void {
+    this.fileName = newFileName;
     this.updateTimestamp();
   }
 
-  public updateFileExtension(newFileExtension: string): void {
-    this.setFileExtension(newFileExtension);
+  public updateFileExtension(newFileExtension: FileExtension): void {
+    this.fileExtension = newFileExtension;
     this.updateTimestamp();
   }
 
-  public updateContentType(newContentType: string): void {
-    this.setContentType(newContentType);
+  public updateContentType(newContentType: ContentType): void {
+    this.contentType = newContentType;
     this.updateTimestamp();
   }
 
@@ -49,56 +60,30 @@ export class Document {
     this.updateTimestamp();
   }
 
-  public setFilePath(filePath: string): void {
+  public setFilePath(filePath: FilePath): void {
     this.filePath = filePath;
     this.updateTimestamp();
   }
 
-  private setId(id: string): void {
-    if (!id || id.length === 0) {
-      throw new Error("ID cannot be empty.");
-    }
-    this.id = id;
-  }
-
-  private setFileName(fileName: string): void {
-    if (!fileName || fileName.length === 0) {
-      throw new Error("File name cannot be empty.");
-    }
-    this.fileName = fileName;
-  }
-
-  private setFileExtension(fileExtension: string): void {
-    if (!fileExtension || fileExtension.length === 0) {
-      throw new Error("File extension cannot be empty.");
-    }
-    this.fileExtension = fileExtension;
-  }
-
-  private setContentType(contentType: string): void {
-    if (!contentType || contentType.length === 0) {
-      throw new Error("Content type cannot be empty.");
-    }
-    this.contentType = contentType;
-  }
-
+  // Private method to update timestamp
   private updateTimestamp(): void {
     this.updatedAt = new Date();
   }
 
+  // Getters for properties
   public getId(): string {
     return this.id;
   }
 
-  public getFileName(): string {
+  public getFileName(): FileName {
     return this.fileName;
   }
 
-  public getFileExtension(): string {
+  public getFileExtension(): FileExtension {
     return this.fileExtension;
   }
 
-  public getContentType(): string {
+  public getContentType(): ContentType {
     return this.contentType;
   }
 
@@ -114,7 +99,7 @@ export class Document {
     return this.updatedAt;
   }
 
-  public getFilePath(): string {
+  public getFilePath(): FilePath {
     return this.filePath;
   }
 }

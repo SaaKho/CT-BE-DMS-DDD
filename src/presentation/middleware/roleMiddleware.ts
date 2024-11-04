@@ -3,16 +3,14 @@ import { Request, Response, NextFunction } from "express";
 import { db, permissions } from "../../infrastructure/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
-// Define the structure of the JWT payload
-interface JwtPayload {
+export interface UserDTO {
   id: string;
   username: string;
   role: string;
 }
 
-// Extend Request to include user
 export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
+  user?: UserDTO;
 }
 
 // Middleware for role-based authorization

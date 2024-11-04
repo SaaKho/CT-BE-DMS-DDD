@@ -1,6 +1,9 @@
+import 'reflect-metadata';
 import { Command } from "commander";
 import dotenv from "dotenv";
 import createApp from "./app";
+
+
 
 // Load environment variables
 dotenv.config();

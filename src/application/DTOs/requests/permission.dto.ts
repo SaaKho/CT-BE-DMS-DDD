@@ -4,3 +4,10 @@ export interface PermissionDTO {
   userId: string;
   permissionType: string;
 }
+export interface ShareDocumentDTO {
+  documentId: string;
+  email?: string;
+  permissionType: string;
+}
+
+

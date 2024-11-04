@@ -1,99 +1,73 @@
 // src/entities/User.ts
+
+import { UserPassword } from "../valueObjects/user-password.vo";
+import { Username } from "../valueObjects/username.vo";
+import { Email } from "../valueObjects/user-email.vo";
+import { Role } from "../valueObjects/user-role.vo";
+
 export class User {
-  private id!: string;
-  private username!: string;
-  private email!: string;
-  private password!: string;
-  private role!: string;
+  private id: string;
+  private username: Username;
+  private email: Email;
+  private password: UserPassword;
+  private role: Role;
 
   constructor(
     id: string,
-    username: string,
-    email: string,
-    password: string,
-    role: string = "User"
+    username: Username,
+    email: Email,
+    password: UserPassword,
+    role: Role = new Role("User") // Default role as User
   ) {
+    if (!id || id.length === 0) {
+      throw new Error("ID cannot be empty.");
+    }
     this.id = id;
-    this.setUsername(username);
-    this.setEmail(email);
-    this.setPassword(password);
-    this.setRole(role);
+    this.username = username;
+    this.email = email;
+    this.password = password;
+    this.role = role;
   }
 
-  // Method to initialize ID after construction
   public initializeId(id: string): void {
     if (!this.id) {
       this.id = id;
     }
   }
 
-  // Getters
   public getId(): string {
     return this.id;
   }
 
-  public getUsername(): string {
+  public getUsername(): Username {
     return this.username;
   }
 
-  public getEmail(): string {
+  public getEmail(): Email {
     return this.email;
   }
 
-  public getPassword(): string {
+  public getPassword(): UserPassword {
     return this.password;
   }
 
-  public getRole(): string {
+  public getRole(): Role {
     return this.role;
   }
 
-  // Setters with validation so invarients donot exist
-  //Setters with Encapsulated Logic
-  private setUsername(username: string): void {
-    if (!username || username.length === 0) {
-      throw new Error("Username cannot be empty.");
-    }
+  public updateUsername(username: Username): void {
     this.username = username;
   }
 
-  private setEmail(email: string): void {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new Error("Invalid Email Format");
-    }
+  public updateEmail(email: Email): void {
     this.email = email;
   }
 
-  private setPassword(password: string): void {
-    if (password.length < 6) {
-      throw new Error("Password must be at least 6 characters long.");
-    }
-    this.password = password;
+  public async updatePassword(newPassword: string): Promise<void> {
+    this.password = await UserPassword.create(newPassword);
   }
 
-  private setRole(role: string): void {
-    const validRoles = ["User", "Admin"];
-    if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role. Allowed values: ${validRoles.join(", ")}`);
-    }
+  public updateRole(role: Role): void {
     this.role = role;
-  }
-
-  // Public methods for updating properties
-  public updateUsername(username: string): void {
-    this.setUsername(username);
-  }
-
-  public updateEmail(email: string): void {
-    this.setEmail(email);
-  }
-
-  public updatePassword(password: string): void {
-    this.setPassword(password);
-  }
-
-  public updateRole(role: string): void {
-    this.setRole(role);
   }
 }
