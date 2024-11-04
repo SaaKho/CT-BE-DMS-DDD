@@ -4,38 +4,59 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_default_jwt_secret";
 const LINK_EXPIRATION = process.env.LINK_EXPIRATION || "15m";
+const UPLOADS_DIR = path.join(__dirname, "../../uploads");
+const DOCUMENTS_DIR = path.join(__dirname, "../../documents");
+const DOWNLOADS_DIR = path.join(__dirname, "../../downloads");
 
-// Service to generate a download link
-export const generateDownloadLink = (filename: string) => {
+// Utility function to check if a directory exists, if not, it creates it
+const ensureDirectoryExists = (dirPath: string) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+// Generates a JWT-based download link for a given file
+export const generateDownloadLink = (
+  filename: string,
+  protocol: string,
+  host: string
+) => {
   const token = jwt.sign({ filename }, JWT_SECRET, {
     expiresIn: LINK_EXPIRATION,
   });
-  return token;
+
+  const downloadLink = `${protocol}://${host}/api/documents/download/${token}`;
+  return downloadLink;
 };
 
-// Service to verify a token and get the file path
-export const getFilePathFromToken = (token: string) => {
+// Serves a file based on the provided JWT token
+export const serveFileByToken = (token: string) => {
   const decoded = jwt.verify(token, JWT_SECRET) as { filename: string };
 
-  let filePath = path.join(__dirname, "../../uploads", decoded.filename);
+  const uploadsFilePath = path.join(UPLOADS_DIR, decoded.filename);
+  const documentsFilePath = path.join(DOCUMENTS_DIR, decoded.filename);
+
+  console.log("Decoded filename:", decoded.filename);
+  console.log("Checking file in uploadsDir:", uploadsFilePath);
+  console.log("Checking file in documentsDir:", documentsFilePath);
+
+  let filePath = uploadsFilePath;
   if (!fs.existsSync(filePath)) {
-    filePath = path.join(__dirname, "../../documents", decoded.filename);
+    filePath = documentsFilePath;
     if (!fs.existsSync(filePath)) {
       throw new Error("File not found");
     }
   }
-  return filePath;
-};
 
-// Service to ensure the downloads directory exists and copy the file
-export const copyFileToDownloads = (filePath: string, filename: string) => {
-  const downloadsDir = path.join(__dirname, "../../downloads");
-  if (!fs.existsSync(downloadsDir)) {
-    fs.mkdirSync(downloadsDir, { recursive: true });
-  }
+  // Ensure the downloads directory exists
+  ensureDirectoryExists(DOWNLOADS_DIR);
 
-  const downloadFilePath = path.join(downloadsDir, filename);
+  const downloadFilePath = path.join(DOWNLOADS_DIR, decoded.filename);
+
+  // Copy the file to the downloads directory
   fs.copyFileSync(filePath, downloadFilePath);
+
+  console.log("File copied to downloads directory:", downloadFilePath);
 
   return downloadFilePath;
 };

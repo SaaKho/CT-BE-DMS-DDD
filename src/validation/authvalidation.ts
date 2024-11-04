@@ -1,19 +1,16 @@
 import { z } from "zod";
-import { UserRole } from "../drizzle/schema";
+
+// Define the roles directly in the validation schema
+const roles = ["user", "admin"] as const;
 
 // User Registration Schema
 export const registerSchema = z.object({
+  id: z.string().uuid("Invalid UUID"), // Ensure the id is a valid UUID
   username: z.string().min(1, "Username is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
   role: z
-    .string()
-    .transform((val) => val.toLowerCase()) // Normalize to lowercase
-    .refine((val) =>
-      Object.values(UserRole)
-        .map((role) => role.toLowerCase())
-        .includes(val)
-    )
+    .enum(roles) // Validate against the defined roles
     .optional(), // Role is optional
 });
 

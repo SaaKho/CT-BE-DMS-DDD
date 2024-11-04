@@ -1,75 +1,75 @@
-// src/services/userService.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db, users } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { UserRepository } from "../repository/userRepository";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
+const userRepository = new UserRepository();
 
-export const registerUser = async (
-  username: string,
-  email: string,
-  password: string,
-  role: string = "user"
-) => {
-  const hashedPassword = await bcrypt.hash(password, 10);
-  return await db
-    .insert(users)
-    .values({
-      username,
-      email,
-      password: hashedPassword,
-      role: role.toLowerCase(),
-    })
-    .returning();
-};
-
-export const authenticateUser = async (username: string, password: string) => {
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, username))
-    .execute();
-
-  const user = result[0];
-
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    throw new Error("Invalid username or password");
+export class UserService {
+  // Method to register a new user
+  async registerNewUser(username: string, email: string, password: string) {
+    const newUser = await userRepository.createUser(username, email, password);
+    return newUser;
   }
 
-  const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
-    JWT_SECRET,
-    { expiresIn: "1h" }
-  );
+  // Method to register a new admin
+  async registerNewAdmin(username: string, email: string, password: string) {
+    const newAdmin = await userRepository.createUser(
+      username,
+      email,
+      password,
+      "Admin"
+    );
+    return newAdmin;
+  }
 
-  return token;
-};
+  // Method to login a user
+  async login(username: string, password: string) {
+    const result = await userRepository.findUserByUsername(username);
+    const user = result[0];
 
-export const updateUser = async (
-  id: string,
-  username?: string,
-  email?: string,
-  password?: string,
-  role?: string
-) => {
-  const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw new Error("Invalid username or password");
+    }
 
-  const updatedUser = await db
-    .update(users)
-    .set({
-      username: username || undefined,
-      email: email || undefined,
-      password: hashedPassword || undefined,
-      role: role ? role.toLowerCase() : undefined,
-    })
-    .where(eq(users.id, id))
-    .returning()
-    .execute();
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-  return updatedUser;
-};
+    return token;
+  }
 
-export const deleteUser = async (id: string) => {
-  return await db.delete(users).where(eq(users.id, id)).execute();
-};
+  // Method to update a user
+  async updateUser(
+    id: string,
+    username: string,
+    email: string,
+    password: string,
+    role: string
+  ) {
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+
+    const updatedUser = await userRepository.updateUser(
+      id,
+      username,
+      email,
+      hashedPassword || "",
+      role ? role.toLowerCase() : "User"
+    );
+
+    return updatedUser;
+  }
+
+  // Method to delete a user
+  async deleteUser(id: string) {
+    const deleteResult = await userRepository.deleteUser(id);
+
+    if (!deleteResult.rowCount || deleteResult.rowCount === 0) {
+      throw new Error("User not found");
+    }
+
+    return deleteResult;
+  }
+}
