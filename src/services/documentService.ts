@@ -1,94 +1,73 @@
-// src/services/documentService.ts
-import path from "path";
-import fs from "fs";
-import { db, documents } from "../drizzle/schema";
-import { v4 as uuidv4 } from "uuid";
-import { eq } from "drizzle-orm";
+import { db, documents, permissions } from "../drizzle/schema";
+import { v4 as uuidv4 } from "uuid"; // For generating unique document IDs
+import { eq } from "drizzle-orm"; // Import eq function
 
-// Service to get all documents
-export const getAllDocuments = async () => {
-  return await db.select().from(documents).execute();
-};
-
-// Service to get a document by ID
-export const getDocumentById = async (id: string) => {
-  return await db
-    .select()
-    .from(documents)
-    .where(eq(documents.id, id))
-    .execute();
-};
-
-// Service to create a new document
-export const createDocument = async (
+// Service to create a new document and assign the user as "Owner"
+export const createDocumentService = async (
+  userId: string,
   fileName: string,
   fileExtension: string,
   contentType: string,
   tags: string[]
 ) => {
-  const documentsDir = path.join(__dirname, "../../documents");
-  if (!fs.existsSync(documentsDir)) {
-    fs.mkdirSync(documentsDir, { recursive: true });
-  }
+  const newDocumentId = uuidv4(); // Generate a unique document ID
 
-  const fullFilePath = path.join(documentsDir, `${fileName}${fileExtension}`);
-  fs.writeFileSync(fullFilePath, "", "utf8");
-
-  const newDocument = await db
+  // Insert the new document
+  await db
     .insert(documents)
     .values({
-      id: uuidv4(),
+      id: newDocumentId,
       fileName,
       fileExtension,
       contentType,
-      tags: tags,
+      tags,
     })
-    .returning();
-
-  return { newDocument, fullFilePath };
-};
-
-// Service to upload a document
-export const uploadDocument = async (
-  file: Express.Multer.File,
-  tags: string[]
-) => {
-  const metadata = {
-    fileName: path.parse(file.originalname).name,
-    fileExtension: path.extname(file.originalname),
-    contentType: file.mimetype,
-    tags: tags ? tags : [],
-  };
-
-  const newDocument = await db.insert(documents).values(metadata).returning();
-
-  const filePath = path.join(__dirname, "../../uploads", file.filename);
-
-  return { newDocument, filePath };
-};
-
-// Service to delete a document by ID
-export const deleteDocumentById = async (id: string) => {
-  const existingDocument = await db
-    .select()
-    .from(documents)
-    .where(eq(documents.id, id))
     .execute();
 
-  if (existingDocument.length === 0) {
-    return null;
-  }
+  // Assign the user as the "Owner" in the permissions table
+  await db
+    .insert(permissions)
+    .values({
+      id: uuidv4(),
+      documentId: newDocumentId,
+      userId: userId,
+      permissionType: "Owner", // User is the owner of the document
+    })
+    .execute();
 
-  await db.delete(documents).where(eq(documents.id, id)).execute();
+  return newDocumentId;
+};
 
-  const filePath = path.join(
-    __dirname,
-    "../../uploads",
-    `${existingDocument[0].fileName}${existingDocument[0].fileExtension}`
-  );
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+// Service to get a document by ID
+export const getDocumentService = async (documentId: string) => {
+  const document = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.id, documentId)) // Use eq function correctly
+    .execute();
 
-  return existingDocument[0];
+  return document[0]; // Return the document if found
+};
+
+// Service to update a document by ID (only Owner and Editor can update)
+export const updateDocumentService = async (
+  documentId: string,
+  updates: Partial<{ fileName: string; fileExtension: string; contentType: string; tags: string[] }>
+) => {
+  const updatedDocument = await db
+    .update(documents)
+    .set(updates)
+    .where(eq(documents.id, documentId)) // Use eq function correctly
+    .returning()
+    .execute();
+
+  return updatedDocument[0];
+};
+
+// Service to delete a document by ID (only Owner or Admin can delete)
+export const deleteDocumentService = async (documentId: string) => {
+  await db
+    .delete(documents)
+    .where(eq(documents.id, documentId)) // Use eq function correctly
+    .execute();
 };

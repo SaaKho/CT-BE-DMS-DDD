@@ -16,7 +16,7 @@ export interface AuthenticatedRequest extends Request {
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
 
 // Middleware to authenticate user and decode token
-export const authMiddleware = (
+export const loginMiddleware = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -36,19 +36,4 @@ export const authMiddleware = (
   } catch (error) {
     return res.status(403).json({ message: "Invalid or expired token" });
   }
-};
-export const authorizeRole = (requiredRole: string) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
-    if (req.user.role !== requiredRole) {
-      return res
-        .status(403)
-        .json({ message: `Access denied. Requires ${requiredRole} role.` });
-    }
-
-    next();
-  };
 };
